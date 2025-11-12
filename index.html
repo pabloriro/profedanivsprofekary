@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz: Dani vs Kary</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Estilo base con la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* gray-900 */
+        }
+
+        /* Estilos para las animaciones de las opciones */
+        .option-btn {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); /* Sombra cyan suave */
+        }
+
+        /* Clases para los estados de las respuestas */
+        .correct {
+            background-color: #22C55E !important; /* green-500 */
+            color: #ffffff;
+            border-color: #16A34A; /* green-700 */
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .incorrect {
+            background-color: #EF4444 !important; /* red-500 */
+            color: #ffffff;
+            border-color: #B91C1C; /* red-700 */
+        }
+
+        /* Estilo para las opciones deshabilitadas que no fueron seleccionadas */
+        .disabled {
+            opacity: 0.5;
+            filter: grayscale(80%);
+        }
+
+        /* Animación para la barra de progreso */
+        .progress-bar-inner {
+            transition: width 0.5s ease-out;
+        }
+
+        /* Animación de entrada para las pantallas */
+        .screen {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+
+        <!-- --- 1. PANTALLA DE INICIO --- -->
+        <div id="start-screen" class="text-center p-8 bg-gray-800 rounded-lg shadow-xl screen">
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-400 mb-4">Duelo de Profesoras Jefe</h1>
+            <h2 class="text-3xl font-semibold mb-8">Profesora Dani vs Profesora Kary</h2>
+            <p class="text-lg text-gray-300 mb-10">¡Demuestren quién conoce mejor a su curso! <br> Cada profesora responderá 8 preguntas. <br>¡La que tenga más correctas gana!</p>
+            <button id="start-button" class="w-full md:w-1/2 bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-4 px-8 rounded-lg text-2xl transition duration-300 transform hover:scale-105">
+                ¡Comenzar Duelo!
+            </button>
+        </div>
+
+        <!-- --- 2. PANTALLA DEL JUEGO --- -->
+        <div id="game-screen" class="hidden screen">
+            <!-- Marcadores -->
+            <div class="grid grid-cols-2 gap-4 mb-6 text-center">
+                <div id="team-a-score-card" class="p-4 bg-gray-700 rounded-lg shadow-md border-b-4 border-cyan-500">
+                    <h2 class="text-xl md:text-2xl font-bold text-cyan-400">Profesora Dani</h2>
+                    <p id="score-a" class="text-3xl md:text-4xl font-black">0</p>
+                </div>
+                <div id="team-b-score-card" class="p-4 bg-gray-700 rounded-lg shadow-md border-b-4 border-gray-500">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-400">Profesora Kary</h2>
+                    <p id="score-b" class="text-3xl md:text-4xl font-black">0</p>
+                </div>
+            </div>
+
+            <!-- Información del Turno -->
+            <div id="turn-indicator" class="mb-4 text-center">
+                <p class="text-2xl font-semibold">Turno de: <span id="current-team-name" class="font-bold text-cyan-400"></span></p>
+            </div>
+
+            <!-- Pregunta y Opciones -->
+            <div class="p-6 md:p-8 bg-gray-800 rounded-lg shadow-xl">
+                <!-- Barra de Progreso -->
+                <div class="w-full bg-gray-700 rounded-full h-6 mb-6">
+                    <div id="progress-bar" class="bg-cyan-400 h-6 rounded-full text-center text-gray-800 font-semibold progress-bar-inner" style="width: 0%;">
+                        Pregunta <span id="question-count-display">0</span> / 16
+                    </div>
+                </div>
+
+                <!-- Pregunta -->
+                <h3 id="question-text" class="text-2xl md:text-3xl font-bold mb-8 min-h-[100px] flex items-center justify-center text-center">
+                    Cargando pregunta...
+                </h3>
+
+                <!-- Opciones de Respuesta -->
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Las opciones se generan dinámicamente aquí -->
+                </div>
+
+                <!-- Botón de Siguiente Pregunta (Eliminado) -->
+                <!-- 
+                <button id="next-question-button" class="hidden w-full mt-8 bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-6 rounded-lg text-xl transition duration-300">
+                    Siguiente Pregunta &rarr;
+                </button>
+                -->
+            </div>
+        </div>
+
+        <!-- --- 3. PANTALLA FINAL --- -->
+        <div id="end-screen" class="hidden text-center p-8 bg-gray-800 rounded-lg shadow-xl screen">
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-400 mb-4">¡Juego Terminado!</h1>
+            <h2 id="winner-text" class="text-3xl font-semibold mb-8">¡Hubo un empate!</h2>
+            
+            <div class="text-2xl mb-8">
+                <p class="mb-2"><span class="font-bold text-cyan-400">Profesora Dani:</span> <span id="final-score-a">0</span> puntos</p>
+                <p><span class="font-bold text-gray-400">Profesora Kary:</span> <span id="final-score-b">0</span> puntos</p>
+            </div>
+
+            <button id="restart-button" class="w-full md:w-1/2 bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-4 px-8 rounded-lg text-2xl transition duration-300 transform hover:scale-105">
+                ¿Jugar de nuevo?
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. CONFIGURACIÓN DEL JUEGO ---
+
+        const allQuestions = [
+            // Preguntas para Profesora Dani (8)
+            { 
+                question: "¿Cuántos alumnos hay en su curso?",
+                options: ["34", "35", "32", "36"], 
+                answer: "34" 
+            },
+            { 
+                question: "¿Cómo se llama/n su/s estudiante/s con el mayor promedio de su curso?",
+                options: ["Mateo Peña", "Sofía Lopez", "Pablo Barraza", "Matilda Matus"], 
+                answer: "Mateo Peña" 
+            },
+            { 
+                question: "¿Cúal es la asignatura en la que a sus estudiantes no les va muy bien?",
+                options: ["Matemática", "Lenguaje", "Filosofía", "Inglés"], 
+                answer: "Matemática" 
+            },
+            { 
+                question: "¿Cuál es el promedio general de su curso?",
+                options: ["5,7", "6,0", "6,5", "5,8"], 
+                answer: "5,7" 
+            },
+            { 
+                question: "¿En qué mes está de cumpleaños Gabriel Ortiz?",
+                options: ["Mayo", "Abril", "Marzo", "Junio"], 
+                answer: "Mayo" 
+            },
+            { 
+                question: "¿Qué estudiante de su curso tiene la mejor asistencia este año?",
+                options: ["Luka Alfonso", "Evans Marcoleta", "Tatiana Perez", "Madison Tolosa"], 
+                answer: "Luka Alfonso" 
+            },
+            { 
+                question: "¿Cuántas mujeres hay en su curso?",
+                options: ["14", "15", "16", "18"], 
+                answer: "14" 
+            },
+            { 
+                question: "¿Qué grupo de alumnos es mayor en su curso?",
+                options: ["Los humanistas", "Los científicos", "Ambos son iguales", "No hay datos"], 
+                answer: "Los humanistas" 
+            },
+            // --- Fin de preguntas Dani ---
+            
+            // Preguntas para Profesora Kary (8)
+            { 
+                question: "¿Cuál es la asignatura en la que a su curso le va mejor?",
+                options: ["Educación física", "Taller de Inglés", "Inglés", "Ciencias Ciudadanas"], 
+                answer: "Educación física" 
+            },
+            { 
+                question: "¿Cuántos estudiantes hombres hay en su curso?",
+                options: ["14", "16", "20", "13"], 
+                answer: "14" 
+            },
+            { 
+                question: "¿Cuál es el sello del colegio?",
+                options: ["Inglés", "SIMCE", "PAES", "PETS"], 
+                answer: "Inglés" 
+            },
+            { 
+                question: "¿Cuál es el promedio general de su curso?",
+                options: ["5,8", "5,7", "6,0", "6,5"], 
+                answer: "5,8" 
+            },
+            { 
+                question: "¿En qué mes está de cumpleaños Christopher Hilario?",
+                options: ["Noviembre", "Diciembre", "Marzo", "Octubre"], 
+                answer: "Noviembre" 
+            },
+            { 
+                question: "¿Qué estudiante de su curso tiene la mejor asistencia este año?",
+                options: ["Lia Hernandez", "Francisca Gutierrez", "Alejandro Ibarra", "Joaquín Sanchez"], 
+                answer: "Lia Hernandez" 
+            },
+            { 
+                question: "¿Cuántos estudiantes hay en su curso?",
+                options: ["27", "24", "25", "30"], 
+                answer: "27" 
+            },
+            { 
+                question: "¿Qué grupo de alumnos es menor en su su curso?",
+                options: ["Los humanistas", "Los científicos", "Ambos son iguales", "No hay datos"], 
+                answer: "Los humanistas" 
+            }
+            // --- Fin de preguntas Kary ---
+        ];
+
+        // --- 2. ELEMENTOS DEL DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        // const nextQuestionButton = document.getElementById('next-question-button'); // Botón eliminado
+
+        const scoreA_display = document.getElementById('score-a');
+        const scoreB_display = document.getElementById('score-b');
+        const teamAScoreCard = document.getElementById('team-a-score-card');
+        const teamBScoreCard = document.getElementById('team-b-score-card');
+
+        const currentTeamName = document.getElementById('current-team-name');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+
+        const progressBar = document.getElementById('progress-bar');
+        const questionCountDisplay = document.getElementById('question-count-display');
+
+        const winnerText = document.getElementById('winner-text');
+        const finalScoreA = document.getElementById('final-score-a');
+        const finalScoreB = document.getElementById('final-score-b');
+
+        // --- 3. ESTADO DEL JUEGO ---
+        let scores = { Dani: 0, Kary: 0 };
+        let questions = [];
+        let questionIndex = 0;
+        let currentTeam = 'Dani'; // 'Dani' o 'Kary'
+        let acceptingAnswers = true;
+        const TOTAL_QUESTIONS = 16;
+        const QUESTIONS_PER_TEAM = 8;
+        const TEAM_A_NAME = 'Profesora Dani';
+        const TEAM_B_NAME = 'Profesora Kary';
+
+        // --- 4. FUNCIONES DEL JUEGO ---
+
+        /**
+         * Función para mezclar un array (Algoritmo Fisher-Yates)
+         */
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        /**
+         * Inicia el juego
+         */
+        function startGame() {
+            // Reiniciar estado
+            scores = { Dani: 0, Kary: 0 };
+            questionIndex = 0;
+            currentTeam = 'Dani'; // Siempre empieza Dani
+            acceptingAnswers = true;
+
+            // Mezclar las preguntas (las 8 de Dani primero, las 8 de Kary después)
+            // const questionsDani = shuffle(allQuestions.slice(0, QUESTIONS_PER_TEAM)); // <-- Eliminado
+            // const questionsKary = shuffle(allQuestions.slice(QUESTIONS_PER_TEAM, TOTAL_QUESTIONS)); // <-- Eliminado
+            
+            // Asignamos las preguntas por turno
+            // questions = []; // <-- Eliminado
+            // for (let i = 0; i < QUESTIONS_PER_TEAM; i++) { // <-- Eliminado
+            //     questions.push(questionsDani[i]); // Turno Dani // <-- Eliminado
+            //     questions.push(questionsKary[i]); // Turno Kary // <-- Eliminado
+            // } // <-- Eliminado
+
+            // --- NUEVO CAMBIO ---
+            // Mezclar TODAS las 16 preguntas juntas en un solo mazo
+            questions = shuffle([...allQuestions]);
+            // --- FIN DEL CAMBIO ---
+
+            // Actualizar UI
+            updateScoreDisplay();
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            
+            showNextQuestion();
+        }
+
+        /**
+         * Muestra la siguiente pregunta
+         */
+        function showNextQuestion() {
+            if (questionIndex >= TOTAL_QUESTIONS) {
+                endGame();
+                return;
+            }
+
+            // Reiniciar UI de pregunta
+            acceptingAnswers = true;
+            optionsContainer.innerHTML = '';
+            // nextQuestionButton.classList.add('hidden'); // Botón eliminado
+            
+            // --- NUEVO CAMBIO ---
+            // Determinar el turno basado en el índice de la pregunta
+            // (Par 0, 2, 4... es Dani, Impar 1, 3, 5... es Kary)
+            currentTeam = (questionIndex % 2 === 0) ? 'Dani' : 'Kary';
+            // --- FIN DEL CAMBIO ---
+
+            updateTurnIndicator();
+
+            // Cargar datos de la pregunta
+            const currentQuestion = questions[questionIndex];
+            questionText.textContent = currentQuestion.question;
+
+            // Mezclar opciones y crearlas
+            const shuffledOptions = shuffle([...currentQuestion.options]);
+            shuffledOptions.forEach(optionText => {
+                const button = document.createElement('button');
+                button.textContent = optionText;
+                button.classList.add('option-btn', 'w-full', 'p-4', 'md:p-5', 'text-lg', 'md:text-xl', 'font-semibold', 'bg-gray-700', 'rounded-lg', 'border-2', 'border-gray-600', 'hover:bg-gray-600', 'hover:border-cyan-500');
+                button.addEventListener('click', () => selectAnswer(button, optionText, currentQuestion.answer));
+                optionsContainer.appendChild(button);
+            });
+
+            // Actualizar barra de progreso
+            const progressPercentage = ((questionIndex + 1) / TOTAL_QUESTIONS) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+            questionCountDisplay.textContent = questionIndex + 1;
+        }
+
+        /**
+         * Maneja la selección de una respuesta
+         */
+        function selectAnswer(selectedButton, selectedOption, correctAnswer) {
+            if (!acceptingAnswers) return;
+            acceptingAnswers = false;
+
+            const isCorrect = (selectedOption === correctAnswer);
+
+            // Resaltar respuesta correcta e incorrecta
+            if (isCorrect) {
+                selectedButton.classList.add('correct');
+                // Sumar puntos
+                if (currentTeam === 'Dani') {
+                    scores.Dani++;
+                } else {
+                    scores.Kary++;
+                }
+            } else {
+                selectedButton.classList.add('incorrect');
+            }
+
+            // Deshabilitar todas las opciones y mostrar la correcta
+            Array.from(optionsContainer.children).forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === correctAnswer) {
+                    btn.classList.add('correct'); // Muestra la correcta aunque no se haya elegido
+                }
+                if (btn !== selectedButton && btn.textContent !== correctAnswer) {
+                    btn.classList.add('disabled'); // Atenúa las incorrectas no seleccionadas
+                }
+            });
+
+            // Actualizar marcadores
+            updateScoreDisplay();
+
+            // Mostrar botón "Siguiente" -> Ahora automático
+            // nextQuestionButton.classList.remove('hidden'); // Reemplazado por setTimeout
+
+            // Esperar 2 segundos y pasar a la siguiente pregunta automáticamente
+            setTimeout(handleNextQuestion, 2000); // 2000ms = 2 segundos
+        }
+
+        /**
+         * Pasa a la siguiente pregunta (y cambia de turno)
+         */
+        function handleNextQuestion() {
+            questionIndex++;
+            // Cambiar de turno
+            // currentTeam = (currentTeam === 'Dani') ? 'Kary' : 'Dani'; // <-- Eliminado (Ahora se calcula en showNextQuestion)
+            showNextQuestion();
+        }
+
+        /**
+         * Actualiza los marcadores en la UI
+         */
+        function updateScoreDisplay() {
+            scoreA_display.textContent = scores.Dani;
+            scoreB_display.textContent = scores.Kary;
+        }
+
+        /**
+         * Actualiza el indicador de turno
+         */
+        function updateTurnIndicator() {
+            if (currentTeam === 'Dani') {
+                currentTeamName.textContent = TEAM_A_NAME;
+                currentTeamName.classList.remove('text-gray-400');
+                currentTeamName.classList.add('text-cyan-400');
+                teamAScoreCard.classList.add('border-cyan-500');
+                teamAScoreCard.classList.remove('border-gray-500');
+                teamBScoreCard.classList.add('border-gray-500');
+                teamBScoreCard.classList.remove('border-cyan-500');
+            } else {
+                currentTeamName.textContent = TEAM_B_NAME;
+                currentTeamName.classList.add('text-gray-400');
+                currentTeamName.classList.remove('text-cyan-400');
+                teamBScoreCard.classList.add('border-cyan-500');
+                teamBScoreCard.classList.remove('border-gray-500');
+                teamAScoreCard.classList.add('border-gray-500');
+                teamAScoreCard.classList.remove('border-cyan-500');
+            }
+        }
+
+        /**
+         * Finaliza el juego y muestra resultados
+         */
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+
+            finalScoreA.textContent = scores.Dani;
+            finalScoreB.textContent = scores.Kary;
+
+            if (scores.Dani > scores.Kary) {
+                winnerText.textContent = `¡Felicidades ${TEAM_A_NAME}, has ganado!`;
+            } else if (scores.Kary > scores.Dani) {
+                winnerText.textContent = `¡Felicidades ${TEAM_B_NAME}, has ganado!`;
+            } else {
+                winnerText.textContent = "¡Increíble, es un empate!";
+            }
+        }
+
+        // --- 5. EVENT LISTENERS ---
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        // nextQuestionButton.addEventListener('click', handleNextQuestion); // Botón eliminado
+    </script>
+
+</body>
+</html>
